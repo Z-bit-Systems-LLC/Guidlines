@@ -321,6 +321,48 @@ Templates for common layout patterns.
 </TextBlock>
 ```
 
+#### Tag Select (multi-select field)
+
+For choosing several items from a list that is expected to grow. The field shows what has been
+chosen as removable tags and keeps the full list behind a picker, so the section stays one row
+tall however many options exist. Prefer it over a row of check boxes once the option list is long
+enough to dominate the page, and over a plain list where what matters at a glance is what has been
+chosen rather than what is on offer.
+
+```xml
+<Border Style="{StaticResource TagInput.Container}">
+    <Grid>
+        <!-- Column 0: placeholder shown when empty, plus a WrapPanel of Tag.Container chips -->
+        <!-- Column 1: ToggleButton that opens a Popup holding the full ListBox.CheckList -->
+    </Grid>
+</Border>
+```
+
+Three WPF behaviours decide whether this works, and all three cost real debugging to find:
+
+1. **The row owns the click, not the check box.** A themed `CheckBox` is only hit tested over the
+   glyph and label it paints, so stretching one across a row does *not* widen the target. Bind the
+   row's `IsSelected` to the item and make the check box a non-interactive indicator
+   (`IsHitTestVisible="False"`, `Focusable="False"`) instead.
+2. **Replace the row chrome, do not restyle it.** A themed list fills the whole row with the accent
+   colour when an item is selected. On a list where most items are usually checked that reads as a
+   solid block rather than a set of choices, so the item template is a plain `Border` with
+   `Background="Transparent"` — transparent rather than unset, because an unpainted row is not hit
+   tested at all.
+3. **Take the opening control out of hit testing while the picker is open.** A `Popup` with
+   `StaysOpen="False"` closes on any press outside it, and the toggle that opens it is outside it.
+   Without this the same press that closes the picker also re-opens it, and the picker cannot be
+   closed from the control that opened it. Bind `IsHitTestVisible` to the popup's inverted `IsOpen`
+   rather than guarding on a timer: a timer window swallows a legitimate re-open.
+
+Put bulk actions (select all, select none) inside the picker rather than on the page, where they
+would compete with the page's primary button.
+
+> **Where this lives today:** the styles (`TagInput.Container`, `Tag.Container`, `Tag.Text`,
+> `Tag.Remove`, `TagInput.Placeholder`, `Popup.Surface`, `ListBox.CheckList` /
+> `ListBoxItem.CheckList`) are in OSDP-Bench's `LayoutTemplates.xaml`, not in this library. See
+> **Future Enhancements** for what promoting them would take.
+
 ### 4. Color System
 
 #### Semantic Colors
@@ -373,6 +415,27 @@ xmlns:effects="clr-namespace:ZBitSystems.Wpf.UI.Effects;assembly=ZBitSystems.Wpf
 2. **Responsive breakpoints** - Adaptive layouts for different window sizes
 3. **Dark mode optimizations** - Enhanced dark theme color palette
 4. **Accessibility styles** - High contrast and screen reader optimizations
+5. **Tag select control** - promote the Tag Select pattern above into a lookless control here
+
+### Promoting Tag Select
+
+The pattern is documented under **Common Patterns** but is not a control in this library yet,
+because it has only one consumer. Extract it on the second use, when the second caller is what
+tells you which parts are the contract and which were incidental to the first. Moving it as it
+stands would not be enough; three things have to be redesigned rather than copied:
+
+- **It must not demand a shaped item type.** The styles currently bind `IsSelected`,
+  `AccessibleName`, and `RemoveAccessibleName` on the data item, which forces every consumer's
+  model into this library's shape. A control should take `ItemsSource` plus `SelectedItems` (or an
+  `IsSelectedPath`) and `DisplayMemberPath`, and derive accessible names from the display text.
+- **The behaviour must move with it.** Select-all, select-none, remove-one, and the is-empty state
+  live on the consumer's view model today. They belong to the control, leaving the view model to
+  own only the collection.
+- **It needs a localization story.** This library ships no `.resx`; `ILocalizationProvider` leaves
+  strings to the application. The picker's own chrome (select all, select none, the empty-state
+  placeholder, the per-tag remove name) therefore needs either string dependency properties the
+  application sets, or resources of its own here. Decide this deliberately - it is the first
+  control in this library that has user-visible text of its own.
 
 ### Maintenance
 - Review and update design tokens quarterly
