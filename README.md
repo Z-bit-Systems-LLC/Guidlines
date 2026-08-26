@@ -51,6 +51,8 @@ A reusable WPF component library providing:
 - **ILocalizationProvider** - Interface for implementing custom resource providers
 - **LocalizationService** - Static service for managing the localization provider
 - **LocalizeExtension** - XAML markup extension for accessing localized resources
+- **LocalizeFormatExtension** - XAML markup extension for formatting bound values with a localized format string
+- **LocalizedFormatConverter** - Multi-value converter that applies a bound composite format string
 - **LocalizedStringBinding** - Dynamic binding that updates when culture changes
 
 **Window Management:**

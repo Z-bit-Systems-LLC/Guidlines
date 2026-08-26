@@ -110,4 +110,61 @@ public class LocalizeExtensionTests
         Assert.That(result, Is.InstanceOf<System.Windows.Data.Binding>());
     }
 
+    [Test]
+    public void ProvideValue_WithBindingTarget_ReturnsStaticString()
+    {
+        // Arrange - a CLR property such as StringFormat on a Binding cannot receive a binding
+        var extension = new LocalizeExtension("Test_Greeting");
+        var serviceProvider = CreateTargetServiceProvider(new System.Windows.Data.Binding());
+
+        // Act
+        var result = extension.ProvideValue(serviceProvider);
+
+        // Assert
+        Assert.That(result, Is.EqualTo("Hello"));
+    }
+
+    [Test]
+    public void ProvideValue_WithMultiBindingTarget_ReturnsStaticString()
+    {
+        // Arrange
+        var extension = new LocalizeExtension("Test_Greeting");
+        var serviceProvider = CreateTargetServiceProvider(new System.Windows.Data.MultiBinding());
+
+        // Act
+        var result = extension.ProvideValue(serviceProvider);
+
+        // Assert
+        Assert.That(result, Is.EqualTo("Hello"));
+    }
+
+    [Test]
+    [Apartment(ApartmentState.STA)]
+    public void ProvideValue_WithDependencyPropertyTarget_CreatesBinding()
+    {
+        // Arrange
+        var extension = new LocalizeExtension("Test_Greeting");
+        var textBlock = new System.Windows.Controls.TextBlock();
+        var serviceProvider = CreateTargetServiceProvider(textBlock, System.Windows.Controls.TextBlock.TextProperty);
+
+        // Act
+        var result = extension.ProvideValue(serviceProvider);
+
+        // Assert
+        // A real DependencyProperty target yields a live binding expression
+        Assert.That(result, Is.InstanceOf<System.Windows.Data.BindingExpression>());
+    }
+
+    private static IServiceProvider CreateTargetServiceProvider(object targetObject, object? targetProperty = null)
+    {
+        var mockTarget = new Mock<System.Windows.Markup.IProvideValueTarget>();
+        mockTarget.Setup(target => target.TargetObject).Returns(targetObject);
+        mockTarget.Setup(target => target.TargetProperty).Returns(targetProperty!);
+
+        var mockServiceProvider = new Mock<IServiceProvider>();
+        mockServiceProvider.Setup(provider => provider.GetService(typeof(System.Windows.Markup.IProvideValueTarget)))
+            .Returns(mockTarget.Object);
+
+        return mockServiceProvider.Object;
+    }
 }

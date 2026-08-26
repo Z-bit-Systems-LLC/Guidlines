@@ -43,6 +43,12 @@ public class LocalizeExtension : MarkupExtension
         if (string.IsNullOrEmpty(Key))
             return "[MISSING_KEY]";
 
+        // A Binding cannot be set on a plain CLR property such as Binding.StringFormat, so hand
+        // back the current text instead of a binding that WPF would reject with a parse error.
+        // Use LocalizeFormatExtension when formatted text has to follow culture changes.
+        if (TargetRejectsBinding(serviceProvider))
+            return GetStaticString();
+
         try
         {
             // Create a binding to the LocalizedStringBinding for dynamic updates
@@ -58,14 +64,22 @@ public class LocalizeExtension : MarkupExtension
         catch
         {
             // Fallback to static string if binding fails
-            try
-            {
-                return LocalizationService.Provider.GetString(Key);
-            }
-            catch
-            {
-                return $"[{Key}]";
-            }
+            return GetStaticString();
+        }
+    }
+
+    private static bool TargetRejectsBinding(IServiceProvider? serviceProvider) =>
+        serviceProvider?.GetService(typeof(IProvideValueTarget)) is IProvideValueTarget { TargetObject: BindingBase };
+
+    private string GetStaticString()
+    {
+        try
+        {
+            return LocalizationService.Provider.GetString(Key);
+        }
+        catch
+        {
+            return $"[{Key}]";
         }
     }
 }

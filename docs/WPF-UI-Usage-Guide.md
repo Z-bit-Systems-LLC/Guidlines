@@ -330,6 +330,27 @@ Use the markup extension:
 <TextBox Watermark="{localization:Localize Placeholder_EnterName}" />
 ```
 
+### Formatted Strings
+
+`StringFormat` is a plain CLR property, so it cannot receive the binding that `{localization:Localize}`
+returns. Use `LocalizeFormat` instead - it keeps the format string bound, so the text still refreshes
+when the culture changes and the placeholders can be reordered per language:
+
+```xml
+<!-- Resource: Status_ConnectionFormat = "Address {0} at {1}" -->
+<TextBlock Text="{localization:LocalizeFormat Status_ConnectionFormat, Paths='ViewModel.ConnectedAddress,ViewModel.ConnectedBaudRate'}" />
+
+<!-- Single argument -->
+<TextBlock Text="{localization:LocalizeFormat Status_BaudRateFormat, Paths=ViewModel.BaudRate}" />
+```
+
+`Paths` is a comma separated list of binding paths, in the order the format string consumes them.
+
+```xml
+<!-- Not supported - WPF rejects a binding on StringFormat -->
+<TextBlock Text="{Binding ViewModel.BaudRate, StringFormat={localization:Localize Status_BaudRateFormat}}" />
+```
+
 ### Dynamic Language Switching
 
 The bindings automatically update when the provider raises `PropertyChanged`:
